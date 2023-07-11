@@ -1,4 +1,4 @@
-# Unknown Approval Detection Agent
+# Unknown Approval Detection Bot
 
 ## Description
 
