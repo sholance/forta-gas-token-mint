@@ -1,4 +1,4 @@
-# Soft Rug Pull Detection Agent
+# Unknown Approval Detection Agent
 
 ## Description
 
