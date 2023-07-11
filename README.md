@@ -2,7 +2,7 @@
 
 ## Description
 
-This bot monitors transactions on the blockchain for unknown approval transactions in the transaction history of a given address. These unknown approval transactions could be part of a new scam where scammers use gas tokens to steal money when victims revoke these "fake approvals".
+This bot monitors transactions on the blockchain for unknown approval transactions. These unknown approval transactions are part of a new scam where scammers use gas tokens to steal user funds when victims revoke these "fake approvals".
 
 ## Supported Chains
 
