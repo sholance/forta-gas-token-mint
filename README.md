@@ -1,8 +1,8 @@
-# Unknown Approval Detection Bot
+# Scam Approval Detection Bot
 
 ## Description
 
-This bot monitors transactions on the blockchain for unknown approval transactions. These unknown approval transactions are part of a new scam where scammers use gas tokens to steal user funds when victims revoke these "fake approvals".
+This bot monitors transactions on the blockchain for scam approvals. The transactions are usually with excessive gas fees and most likely do not have a logo. These unknown approval transactions are from a new scam where scammers use gas tokens to take from user funds when victims revoke these "fake approvals" through high gas fees.
 
 ## Supported Chains
 
@@ -18,8 +18,8 @@ This bot monitors transactions on the blockchain for unknown approval transactio
 
 Describe each of the type of alerts fired by this agent
 
-- Name: UNKNOWN-APPROVAL-TRANSACTION
-  - Fired when an unknown approval transaction is detected in the transaction history of a given address
+- Name: SCAM-APPROVAL-TRANSACTION
+  - Fired when a scam approval transaction is detected in the transaction history
   - Severity is always set to `high`
   - Type is always set to `exploit`
   - Metadata
@@ -27,6 +27,7 @@ Describe each of the type of alerts fired by this agent
     - `transactionHash` - hash of the transaction
     - `contractAddress` - address of the contract
     - `token` - token symbol
+    - `gasFee` - gas fee of the transaction
     - `deployer` - address that deployed the contract
   - Label
     - `entityType` - `address` or `transaction`
@@ -35,12 +36,13 @@ Describe each of the type of alerts fired by this agent
     - `confidence` - for the address and transaction
 
 - Name: GAS-TOKEN-SCAM
-  - Fired when two or more unknown approval transactions are detected from the same address and gas tokens were used in these transactions
+  - Fired when two or more scam approval transactions are detected from the same address and gas tokens were used in these transactions
   - Severity is always set to `critical`
   - Type is always set to `fraudulent`
   - Metadata 
     - `sender` - address that initiated the transaction
     - `contractAddress` - address of the contract
+    - `gasFee` - gas fee of the transaction
     - `token` - token symbol
     - `deployer` - address that deployed the contract
   - Label 
