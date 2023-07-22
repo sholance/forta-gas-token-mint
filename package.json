@@ -4,19 +4,8 @@
   "description": "Fake Approval Detector Bot Typescript",
   "repository": "https://github.com/sholance/forta-approvals",
   "chainIds": [
-    137,
-    56,
-    43114,
-    42161,
-    10,
-    250
+    56
   ],
-  "chainSettings": {
-    "default": {
-      "shards": 10,
-      "target": 2
-    }
-  },
   "scripts": {
     "build": "tsc",
     "start": "npm run start:dev",
@@ -39,7 +28,12 @@
     "test": "jest"
   },
   "dependencies": {
-    "forta-agent": "^0.1.33"
+    "bignumber.js": "^9.1.1",
+    "dotenv": "^16.3.1",
+    "forta-agent": "^0.1.33",
+    "forta-agent-tools": "^3.2.7",
+    "forta-helpers": "^1.0.9",
+    "node-fetch": "^2.6.8"
   },
   "devDependencies": {
     "@types/jest": "^27.0.1",

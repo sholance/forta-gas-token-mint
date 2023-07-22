@@ -1,3 +1,6 @@
 node_modules
 dist
 forta.config.json
+note.md
+.env
+log.txt
