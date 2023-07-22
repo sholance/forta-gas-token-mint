@@ -1,5 +1,5 @@
 import BigNumber from "bignumber.js";
-import { Finding, FindingSeverity, FindingType, TransactionEvent, ethers, getTransactionReceipt } from "forta-agent";
+import { EntityType, Finding, FindingSeverity, FindingType, TransactionEvent, ethers, getTransactionReceipt } from "forta-agent";
 import SdMath from "./deviation"
 import { TRANSFER_EVENT_ABI, GAS_TOKEN } from "./constants";
 
@@ -39,21 +39,29 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
       if (gasPrice.isGreaterThan(average.plus(standardDeviation.times(10)))) {
         findings.push(
           Finding.fromObject({
-            name: "Suspicious gas token mint Mint",
-            description: `Large amount of gas token minted: ${gasPrice}`,
-            alertId: "GAS-TOKEN-LARGE-MINT",
+            name: "Suspicious gas token mint",
+            description: `Unusually high amount of gas token minted: ${gasPrice}`,
+            alertId: "GAS-ANOMALOUS-LARGE-MINT",
             protocol: "chi-gas-token",
             severity: FindingSeverity.High,
             type: FindingType.Info,
             metadata: {
               to,
               value: value.toString(),
-            }
+            },
+            labels: [{
+              entityType: EntityType.Address,
+              entity: to,
+              label: "high-gas-token-mint",
+              confidence: 0.8,
+              remove: false,
+              metadata: {},
+    }]
           }
           ))
       }
 
-      // update rolling average
+      // rolling average updated
       rollingMath.addElement(gasPrice);
     });
     return findings;
