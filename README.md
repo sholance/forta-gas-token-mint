@@ -1,4 +1,4 @@
-# Scam Approval Detection Bot
+# Unususal Gas Token Mint Detection Bot
 
 ## Description
 
