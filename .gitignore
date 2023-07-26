@@ -3,4 +3,4 @@ dist
 forta.config.json
 note.md
 .env
-log.txt
+errorlog.txt

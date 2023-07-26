@@ -4,7 +4,9 @@
   "description": "Fake Approval Detector Bot Typescript",
   "repository": "https://github.com/sholance/forta-approvals",
   "chainIds": [
-    56
+    56,
+    137,
+    97
   ],
   "scripts": {
     "build": "tsc",
