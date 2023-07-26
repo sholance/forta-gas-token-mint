@@ -6,12 +6,8 @@ This bot monitors transactions on the blockchain for anomalous gas token minting
 
 ## Supported Chains
 
-- Avalanche
 - Binance Smart Chain
 - Polygon
-- Fantom
-- Arbitrum
-- Optimism
 
 
 ## Alerts
