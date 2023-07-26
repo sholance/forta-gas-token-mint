@@ -9,6 +9,5 @@ export const APPROVAL_EVENT_ABI: string = "event Approval(address indexed owner,
 export const BURN_EVENT_ABI: string = "event Transfer(account, address(0), amount)";
 export const GAS_TOKEN: string = "0x0000000000004946c0e9F43F4Dee607b0eF1fA1c";
 export const MINT_FUNCTION: string = "function mint(uint256 amount)";
-export const GENERAL_TOKEN_STRING: string = "";
 export type providerParamsType = string;
 export const providerParams: providerParamsType = MINT_FUNCTION;
