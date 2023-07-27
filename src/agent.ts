@@ -68,9 +68,8 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
         findings.push(
           Finding.fromObject({
             name: "Suspicious gas token mint",
-            description: `Unusually high amount of gas token minted: ${normalizedValue}`,
+            description: `Suspicious mint of gas token detected: ${normalizedValue}`,
             alertId: "GAS-ANOMALOUS-LARGE-MINT",
-            protocol: "chi-gas-token",
             severity: FindingSeverity.High,
             type: FindingType.Info,
             metadata: {
@@ -80,7 +79,7 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
             labels: [{
               entityType: EntityType.Address,
               entity: JSON.stringify(txEvent.transaction.to),
-              label: "high-gas-token-mint",
+              label: "sus-gas-token-mint",
               confidence: 0.8,
               remove: false,
               metadata: {},
