@@ -63,7 +63,7 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
 
 
       // create finding if gas price is over 10 standard deviations above the past 5000 txs
-      if (value.gt(minThreshold || mintAmount.isGreaterThan(average.plus(standardDeviation.times(10))))) {
+      if (value.gt(minThreshold) || mintAmount.isGreaterThan(average.plus(standardDeviation.times(10)))) {
         try {
         findings.push(
           Finding.fromObject({
