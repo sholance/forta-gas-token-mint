@@ -41,9 +41,9 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
       functionQueue[signature]++;
     } else {
       functionQueue[signature] = 1;
-    }
+    } 
 
-    const mintEvents = txEvent.filterLog(GAS_TOKEN_ABI, networkData.gasAddress);
+    // const mintEvents = txEvent.filterLog(GAS_TOKEN_ABI, networkData.gasAddress);
     const MintEvents = txEvent
       .filterLog(TRANSFER_EVENT, GAS_TOKEN)
       .filter((transferEvent) => {
@@ -58,6 +58,8 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
       const normalizedValue = ethers.utils.formatEther(value);
       const average = rollingMath.getAverage();
       const standardDeviation = rollingMath.getStandardDeviation();
+      const minThreshold = ethers.utils.parseEther("2");
+
 
       // create finding if gas price is over 10 standard deviations above the past 5000 txs
       if (mintAmount.isGreaterThan(average.plus(standardDeviation.times(10)))) {
@@ -91,7 +93,7 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
       }
 
       // rolling average updated
-      rollingMath.addElement(value);
+      rollingMath.addElement(mintAmount);
     })
     return findings;
   };
