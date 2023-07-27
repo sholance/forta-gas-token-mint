@@ -54,12 +54,13 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
     MintEvents.forEach((mintEvent) => {
       const { to, value } = mintEvent.args;
 
+      const mintAmount = new BigNumber(value);
       const normalizedValue = ethers.utils.formatEther(value);
       const average = rollingMath.getAverage();
       const standardDeviation = rollingMath.getStandardDeviation();
 
       // create finding if gas price is over 10 standard deviations above the past 5000 txs
-      if (value.isGreaterThan(average.plus(standardDeviation.times(10)))) {
+      if (mintAmount.isGreaterThan(average.plus(standardDeviation.times(10)))) {
         try {
         findings.push(
           Finding.fromObject({
