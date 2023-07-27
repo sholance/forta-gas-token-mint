@@ -69,7 +69,7 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
           Finding.fromObject({
             name: "Suspicious gas token mint",
             description: `Suspicious mint of gas token detected: ${normalizedValue}`,
-            alertId: "GAS-ANOMALOUS-LARGE-MINT",
+            alertId: "GAS-ANOMALOUS-TOKEN-MINT",
             severity: FindingSeverity.High,
             type: FindingType.Info,
             metadata: {

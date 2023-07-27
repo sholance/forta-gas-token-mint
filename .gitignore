@@ -4,3 +4,4 @@ forta.config.json
 note.md
 .env
 errorlog.txt
+.gitpod.yml
