@@ -34,7 +34,4 @@ Describe each of the type of alerts fired by this agent
 
 ## Test Data
 
-The agent behaviour can be verified with the following tokens:
-
-
-TODO: Add more test data
+The bot behaviour can be verified with supplied unit tests
