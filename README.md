@@ -29,7 +29,7 @@ Describe each of the type of alerts fired by this agent
   - Label 
     - `entityType` - `address` or `contract`
     - `entity` - address of the contract
-    - `label` - `gas-token-scam`
+    - `label` - `sus-gas-token-scam`
     - `confidence` for the address 
 
 ## Test Data
