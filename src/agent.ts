@@ -58,11 +58,12 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
       const normalizedValue = ethers.utils.formatEther(value);
       const average = rollingMath.getAverage();
       const standardDeviation = rollingMath.getStandardDeviation();
-      const minThreshold = ethers.utils.parseEther("2");
+      //test
+      const minThreshold = ethers.utils.parseEther("0");
 
 
       // create finding if gas price is over 10 standard deviations above the past 5000 txs
-      if (mintAmount.isGreaterThan(average.plus(standardDeviation.times(10)))) {
+      if (value.gt(minThreshold || mintAmount.isGreaterThan(average.plus(standardDeviation.times(10))))) {
         try {
         findings.push(
           Finding.fromObject({
@@ -86,6 +87,8 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
             }]
           }
           ))
+          rollingMath.addElement(value);
+
       }
         catch (error) {
           console.log(error);
@@ -93,7 +96,6 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
       }
 
       // rolling average updated
-      rollingMath.addElement(mintAmount);
     })
     return findings;
   };
