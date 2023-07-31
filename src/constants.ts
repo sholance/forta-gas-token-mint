@@ -7,3 +7,5 @@ export const MINT_FUNCTION: string = "function mint(uint256 amount)";
 export const MINT_EVENT: string = "event Mint(address indexed minter, uint256 value)";
 export type providerParamsType = string;
 export const providerParams: providerParamsType = MINT_FUNCTION;
+export const BEP20_APPROVE_FUNCTION_SIG = "function approve(address spender, uint256 amount)";
+export const BEP20_INCREASE_ALLOWANCE_FUNCTION_SIG = "function increaseAllowance(address spender, uint256 amount)";
