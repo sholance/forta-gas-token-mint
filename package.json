@@ -35,7 +35,8 @@
     "forta-agent": "^0.1.33",
     "forta-agent-tools": "^3.2.7",
     "forta-helpers": "^1.0.9",
-    "node-fetch": "^2.6.8"
+    "node-fetch": "^2.6.8",
+    "web3-utils": "^4.0.3"
   },
   "devDependencies": {
     "@types/jest": "^27.0.1",
