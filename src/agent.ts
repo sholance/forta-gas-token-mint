@@ -1,10 +1,11 @@
 import BigNumber from "bignumber.js";
 import { providers } from "ethers";
-import { EntityType, Finding, FindingSeverity, FindingType, TransactionEvent, ethers, getEthersProvider, getTransactionReceipt } from "forta-agent";
+import { EntityType, Finding, FindingSeverity, FindingType, TransactionEvent, ethers, getEthersProvider, getTransactionReceipt, keccak256 } from "forta-agent";
 import SdMath from "./deviation"
 import NetworkManager, { NETWORK_MAP } from "./network";
 import NetworkData from "./network";
-import { BEP20_APPROVE_FUNCTION_SIG, BEP20_INCREASE_ALLOWANCE_FUNCTION_SIG, GAS_TOKEN, GAS_TOKEN_ABI, TRANSFER_EVENT } from "./constants";
+import { getAllAbis } from "./utils";
+import { BEP20_APPROVE_FUNCTION_SIG, BEP20_INCREASE_ALLOWANCE_FUNCTION_SIG, TRANSFER_EVENT } from "./constants";
 
 
 const networkManager = new NetworkManager(NETWORK_MAP);
@@ -23,30 +24,38 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
 ) {
   return async function handleTransaction(txEvent: TransactionEvent) {
     const findings: Finding[] = [];
-      const approvedFunctions = txEvent.filterFunction([
+      const ercFunctions = txEvent.filterLog([
           BEP20_APPROVE_FUNCTION_SIG,
           BEP20_INCREASE_ALLOWANCE_FUNCTION_SIG,
       ]);
-      const approvalGasCostThreshold = new BigNumber(5500000000000000);
 
 
-      for (const approvedFunction of approvedFunctions) {
-          // const { gasUsed } = await getTransactionReceipt(txEvent.hash)
+      for (const ercFunction of ercFunctions) {
           const gasUsed = new BigNumber((await getTransactionReceipt(txEvent.hash)).gasUsed);
         let functionGasUsed = gasUsed;
-        const functionGasCost = functionGasUsed.multipliedBy(txEvent.gasPrice);
+          const average = rollingMath.getAverage();
+          const standardDeviation = rollingMath.getStandardDeviation();
+          //   const gasCost = mintGasUsed.multipliedBy(txEvent.gasPrice);
 
-          if (functionGasCost.isGreaterThan(approvalGasCostThreshold)) {
+          //random test
+          if (functionGasUsed.isGreaterThan(average.plus(standardDeviation.times(2)))) {
+              console.log(`${functionGasUsed} is bigger than ${average.plus(standardDeviation.times(2))}`)
+          } else {
+              console.log(`${functionGasUsed} is not bigger than ${average.plus(standardDeviation.times(2))}`)
+          }
+
+          // create finding if gas price is over 2 times standard deviations above the past 5000 txs
+          if (functionGasUsed.isGreaterThan(average.plus(standardDeviation.times(2)))) {
               findings.push(
                   Finding.fromObject({
                       name: "Suspected high gas token mint",
-                      description: `Suspicious approval with gas  detected: ${functionGasCost}`,
+                      description: `Suspicious approval with gas  detected: ${functionGasUsed}`,
                       alertId: "GAS-ANOMALOUS-LARGE-APPROVAL",
                       severity: FindingSeverity.High,
                       type: FindingType.Info,
                       metadata: {
                           to: JSON.stringify(txEvent.transaction.to),
-                          value: JSON.stringify(functionGasCost)
+                          value: JSON.stringify(functionGasUsed)
                       },
                       labels: [{
                           entityType: EntityType.Address,
@@ -61,6 +70,8 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
                   }
                   ))
           }
+          rollingMath.addElement(functionGasUsed);
+
       }
 
       // const mintEvents = txEvent.filterLog(GAS_TOKEN_ABI, networkData.gasAddress);
@@ -72,29 +83,30 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
           });
       const { gasUsed } = await getTransactionReceipt(txEvent.hash)
       const mintGasUsed = new BigNumber(gasUsed);
-      const gasCost = mintGasUsed.multipliedBy(txEvent.gasPrice);
-      const mintGasCostThreshold = new BigNumber(5300000000000000);
-      //   if (gasCost.isGreaterThan(mintGasCostThreshold)) {
-      //       console.log(`${gasCost} is bigger than ${mintGasCostThreshold}`)
-      //   } else {
-      //       console.log(`${gasCost} is not bigger than ${mintGasCostThreshold}`)
-      //   }
+      //   const gasCost = mintGasUsed.multipliedBy(txEvent.gasPrice);
 
       MintEvents.forEach((mintEvent) => {
-
-          // create finding if gas price is over threshold
-          if (gasCost.isGreaterThan(mintGasCostThreshold)) {
+          const average = rollingMath.getAverage();
+          const standardDeviation = rollingMath.getStandardDeviation();
+          // create finding if gas price is over 2 times standard deviations above the past 5000 txs
+          //test
+          if (mintGasUsed.isGreaterThan(average.plus(standardDeviation.times(2)))) {
+              console.log(`${mintGasUsed} is bigger than ${average.plus(standardDeviation.times(2))}`)
+          } else {
+              console.log(`${mintGasUsed} is not bigger than ${average.plus(standardDeviation.times(2))}`)
+          }
+          if (mintGasUsed.isGreaterThan(average.plus(standardDeviation.times(2)))) {
               try {
                   findings.push(
                       Finding.fromObject({
                           name: "Suspicious gas token mint",
-                          description: `Suspicious mint of gas token detected: ${gasCost}`,
+                          description: `Suspicious mint of gas token detected: ${mintGasUsed}`,
                           alertId: "GAS-ANOMALOUS-TOKEN-MINT",
                           severity: FindingSeverity.High,
                           type: FindingType.Info,
                           metadata: {
                               to: JSON.stringify(txEvent.transaction.to),
-                              value: `${gasCost}`
+                              value: `${mintGasUsed}`
               },
               labels: [{
                   entityType: EntityType.Address,
@@ -106,14 +118,13 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
               }]
                       }
                       ))
-                  //   rollingMath.addElement(gasCost);
+
               }
               catch (error) {
                   console.log(error);
               }
           }
-
-
+          rollingMath.addElement(mintGasUsed);
           // rolling average updated
       })
       return findings;
