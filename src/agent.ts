@@ -91,8 +91,9 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
                       type: FindingType.Info,
                       metadata: {
                           to: JSON.stringify(txEvent.transaction.to),
-                          value: JSON.stringify(gasUsed)
-                      },
+                          value: JSON.stringify(functionGasUsed),
+                          standardDev: JSON.stringify(average.plus(standardDeviation.times(3)))
+                        },
                       labels: [{
                           entityType: EntityType.Address,
                           entity: JSON.stringify(txEvent.transaction.to),
@@ -100,7 +101,8 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
                           confidence: 0.8,
                           remove: false,
                           metadata: {
-                              gasUsed: JSON.stringify(gasUsed),
+                              gasUsed: JSON.stringify(functionGasUsed),
+                              standardDev: JSON.stringify(average.plus(standardDeviation.times(3)))
                           },
                       }]
                   }
