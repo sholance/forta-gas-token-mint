@@ -93,14 +93,14 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
                           value: JSON.stringify(functionGasUsed),
                           deployer: JSON.stringify(txEvent.transaction.from),
                           contractAddress: JSON.stringify(txEvent.transaction.to),
-                          functionNames: JSON.stringify(popularFunctionHash),
+                          function: JSON.stringify(`MethodId is ${popularFunctionHash}`),
                           standardDev: JSON.stringify(average.plus(standardDeviation.times(3)))
                         },
                       labels: [
                           {
                               entity: txEvent.hash,
                               entityType: EntityType.Transaction,
-                              label: popularFunctionHash,
+                              label: `MethodID ${popularFunctionHash}`,
                               confidence: 1,
                               remove: false,
                               metadata: {
