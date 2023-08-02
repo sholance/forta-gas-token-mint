@@ -4,7 +4,6 @@ import { EntityType, Finding, FindingSeverity, FindingType, TransactionEvent, et
 import SdMath from "./deviation"
 import NetworkManager, { NETWORK_MAP } from "./network";
 import NetworkData from "./network";
-import { getAllAbis } from "./utils";
 import { BEP20_APPROVE_FUNCTION_SIG, BEP20_INCREASE_ALLOWANCE_FUNCTION_SIG, TRANSFER_EVENT } from "./constants";
 
 
