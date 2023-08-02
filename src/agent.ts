@@ -39,19 +39,18 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
       // Filter out the most popular functionHashes
       const popularFunctionHasheslist = Object.keys(frequency).filter((functionHash) => {
           const mostPopularFunctionHashes = [
-              "0x095ea7b3", // name
-              "0x313ce567", // symbol
+              "0x095ea7b3", // approve
+              "0x313ce567", // decimals
               "0x18160ddd", // totalSupply
               "0x70a08231", // balanceOf
               "0xa9059cbb", // transfer
-              "0x23b872dd", // approve
+              "0x23b872dd", // transferFrom
               "0x8f20c609", // allowance
-              "0x42966c68", // transferFrom
-              "0x4e71d92d", // increaseAllowance
-              "0x5b5e139f", // decreaseAllowance
+              "0x42966c68", // burn
+              "0x4e71d92d", // claim
               "0x095ea7b3", // name
               "0x313ce567", // symbol
-              "0x8c5be1e5", // decimals
+              "0x8c5be1e5", // Approval
           ];
           return mostPopularFunctionHashes.includes(functionHash);
       });
