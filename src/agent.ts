@@ -90,11 +90,23 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
                       severity: FindingSeverity.High,
                       type: FindingType.Info,
                       metadata: {
-                          to: JSON.stringify(txEvent.transaction.to),
                           value: JSON.stringify(functionGasUsed),
+                          deployer: JSON.stringify(txEvent.transaction.from),
+                          contractAddress: JSON.stringify(txEvent.transaction.to),
+                          functionNames: JSON.stringify(popularFunctionHash),
                           standardDev: JSON.stringify(average.plus(standardDeviation.times(3)))
                         },
-                      labels: [{
+                      labels: [
+                          {
+                              entity: txEvent.hash,
+                              entityType: EntityType.Transaction,
+                              label: popularFunctionHash,
+                              confidence: 1,
+                              remove: false,
+                              metadata: {
+                              }
+                          },
+                          {
                           entityType: EntityType.Address,
                           entity: JSON.stringify(txEvent.transaction.to),
                           label: "sus-gas-consumption",
@@ -102,6 +114,7 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
                           remove: false,
                           metadata: {
                               gasUsed: JSON.stringify(functionGasUsed),
+                              contractAddress: JSON.stringify(txEvent.transaction.to),
                               standardDev: JSON.stringify(average.plus(standardDeviation.times(3)))
                           },
                       }]
