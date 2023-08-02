@@ -59,21 +59,12 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
 
 
       for (const popularFunctionHash of popularFunctionHasheslist) {
-          console.log(`${popularFunctionHash} is here`)
+          //   console.log(`${popularFunctionHash} is here`)
       //   const gasCost = mintGasUsed.multipliedBy(txEvent.gasPrice);
-      //random test
-      //   if (functionGasUsed.isGreaterThan(average.plus(standardDeviation.times(2)))) {
+          //random test
 
-
-      const ercFunctions = txEvent.filterLog([
-          BEP20_APPROVE_FUNCTION_SIG,
-          BEP20_INCREASE_ALLOWANCE_FUNCTION_SIG,
-      ]);
-
-      for (const ercFunction of ercFunctions) {
-          const gasUsed = new BigNumber((await getTransactionReceipt(txEvent.hash)).gasUsed);
-
-        let functionGasUsed = gasUsed;
+          const { gasUsed } = await getTransactionReceipt(txEvent.hash)
+          const functionGasUsed = new BigNumber(gasUsed);
           const average = rollingMath.getAverage();
           const standardDeviation = rollingMath.getStandardDeviation();
 
@@ -85,7 +76,6 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
           //       console.log(`${functionGasUsed} is not bigger than ${average.plus(standardDeviation.times(2))}`)
           //   }
 
-          console.log(ercFunction.args)
           // create finding if gas price is over 2 times standard deviations above the past 5000 txs
           if (functionGasUsed.isGreaterThan(average.plus(standardDeviation.times(2)))) {
               findings.push(
@@ -114,7 +104,6 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
           }
           rollingMath.addElement(functionGasUsed);
 
-      }
 
       // const mintEvents = txEvent.filterLog(GAS_TOKEN_ABI, networkData.gasAddress);
       const MintEvents = txEvent
@@ -123,8 +112,7 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
               const { from } = transferEvent.args;
               return from === "0x0000000000000000000000000000000000000000";
           });
-      const { gasUsed } = await getTransactionReceipt(txEvent.hash)
-      const mintGasUsed = new BigNumber(gasUsed);
+
       //   const gasCost = mintGasUsed.multipliedBy(txEvent.gasPrice);
 
       MintEvents.forEach((mintEvent) => {
@@ -138,7 +126,7 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
           //       console.log(`${mintGasUsed} is not bigger than ${average.plus(standardDeviation.times(2))}`)
           //   }
 
-          if (mintGasUsed.isGreaterThan(average.plus(standardDeviation.times(2)))) {
+          if (functionGasUsed.isGreaterThan(average.plus(standardDeviation.times(2)))) {
               try {
                   findings.push(
                       Finding.fromObject({
@@ -167,7 +155,7 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
                   console.log(error);
               }
           }
-          rollingMath.addElement(mintGasUsed);
+          rollingMath.addElement(functionGasUsed);
           // rolling average updated
       })
       }
