@@ -81,8 +81,9 @@ function provideHandleTransaction(rollingMath: SdMath,
           //       console.log(`${functionGasUsed} is not bigger than ${average.plus(standardDeviation.times(3))}`)
           //   }
 
-          // create finding if gas price is over 3 times standard deviations above the past 5000 txs and sample size to be over 50
-          if (functionGasUsed.isGreaterThan(average.plus(standardDeviation.times(6))) && rollingMath.getNumElements() > 50 && numberOfEvents < 2) {
+          // create finding if gas price is over 3 times standard deviations above the past 5000 txs
+          // and sample size to be over 50 with log less than 2
+          if (functionGasUsed.isGreaterThan(average.plus(standardDeviation.times(9))) && rollingMath.getNumElements() > 50 && numberOfEvents < 2) {
             findings.push(
                   Finding.fromObject({
                       name: "Suspected high gas token mint",
