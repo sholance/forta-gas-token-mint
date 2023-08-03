@@ -10,12 +10,17 @@ import {
 } from "forta-agent";
 import SdMath from "./deviation";
 import NetworkManager, { NETWORK_MAP } from "./network";
+//personal findings local logger
+import { processFindings } from "./processFinding";
 
 // Create an instance of NetworkManager
 const networkManager = new NetworkManager(NETWORK_MAP);
 
 // Variable to keep track of the number of findings
 let findingsCount = 0;
+
+// Track data value
+let valueRange = false; 
 
 // Initialization function
 export const initialize = (provider: providers.Provider) => {
@@ -50,10 +55,9 @@ const provideHandleTransaction = (rollingMath: SdMath) => {
         frequency[functionHash] = BigInt(1);
       }
 
-      // Filter out the most popular functionHashes
-      const popularFunctionHashesList = Object.keys(frequency).filter(
-        (functionHash) => {
-          const mostPopularFunctionHashes = [
+        // Filter out the most popular functionHashes
+        const mostPopularFunctionHashes = [
+
             "0x095ea7b3", // approve
             "0x313ce567", // decimals
             "0x18160ddd", // totalSupply
@@ -67,25 +71,48 @@ const provideHandleTransaction = (rollingMath: SdMath) => {
             "0x313ce567", // symbol
             "0x8c5be1e5", // Approval
           ];
-          return mostPopularFunctionHashes.includes(functionHash);
-        }
-      );
 
+          const popularFunctionHashesList = mostPopularFunctionHashes.filter(
+            (hash) => hash in frequency
+          );
+          
+          // Add infrequent function hashes dynamically to the list
+          for (const hash in frequency) {
+            if (!mostPopularFunctionHashes.includes(hash)) {
+              popularFunctionHashesList.push(hash);
+            }
+          }
+          
+          // Rotate among the popular function hashes using for...of loop
+          let currentIndex = 0;
+          
+          
+      const { logs } = await getTransactionReceipt(txEvent.hash);
+      if (logs) {
+          logs.forEach((log) => {
+              const dataValue = log.data;
+              if (dataValue !== "0x" && BigInt(dataValue) < 100) {
+                  valueRange = true
+              }
+            });
+                }
       // Process each popular function hash
       for (const popularFunctionHash of popularFunctionHashesList) {
+        currentIndex = (currentIndex + 1) % popularFunctionHashesList.length;      
         const { gasUsed } = await getTransactionReceipt(txEvent.hash);
         const functionGasUsed = new BigNumber(gasUsed);
         const average = rollingMath.getAverage();
         const standardDeviation = rollingMath.getStandardDeviation();
-        const numberOfEvents = txEvent.logs.length;
 
-        // Create finding if gas price is over 9 times standard deviations above the past 5000 txs
+        const numberOfEvents = logs.length;
+
+        // Create finding if gas price ia over 9 times standard deviations above the past 5000 txs
         // and sample size to be over 1000 with log less than 2
-        const gasThreshold = average.plus(standardDeviation.times(9));
-        const minSampleSize = 1000;
+        const gasThreshold = average.plus(standardDeviation.times(8));
+        const minSampleSize = 100;
         const maxNumberOfEvents = 2;
-
         if (
+            valueRange &&
           functionGasUsed.isGreaterThan(gasThreshold) &&
           rollingMath.getNumElements() > minSampleSize &&
           numberOfEvents < maxNumberOfEvents
@@ -93,7 +120,7 @@ const provideHandleTransaction = (rollingMath: SdMath) => {
           findings.push(
             Finding.fromObject({
               name: "Suspected high gas token mint",
-              description: `Suspicious function with gas detected: ${functionGasUsed}`,
+              description: `Suspicious function with anomalous gas detected: ${functionGasUsed}`,
               alertId: "GAS-ANOMALOUS-LARGE-CONSUMPTION",
               severity: FindingSeverity.High,
               type: FindingType.Info,
@@ -142,7 +169,8 @@ const provideHandleTransaction = (rollingMath: SdMath) => {
     } catch (error) {
       console.error("Handling transaction event error:", error);
     }
-
+    // log findings locally
+    processFindings(findings)
     return findings;
   };
 };
