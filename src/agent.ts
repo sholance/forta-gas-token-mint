@@ -71,6 +71,7 @@ function provideHandleTransaction(rollingMath: SdMath,
           const functionGasUsed = new BigNumber(gasUsed);
           const average = rollingMath.getAverage();
           const standardDeviation = rollingMath.getStandardDeviation();
+          const numberOfEvents = txEvent.logs.length;
 
           //   const gasCost = mintGasUsed.multipliedBy(txEvent.gasPrice);
           //random test
@@ -81,7 +82,7 @@ function provideHandleTransaction(rollingMath: SdMath,
           //   }
 
           // create finding if gas price is over 3 times standard deviations above the past 5000 txs and sample size to be over 50
-          if (functionGasUsed.isGreaterThan(average.plus(standardDeviation.times(5))) && rollingMath.getNumElements() > 50) {
+          if (functionGasUsed.isGreaterThan(average.plus(standardDeviation.times(6))) && rollingMath.getNumElements() > 50 && numberOfEvents < 2) {
             findings.push(
                   Finding.fromObject({
                       name: "Suspected high gas token mint",
