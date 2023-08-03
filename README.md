@@ -1,4 +1,4 @@
-# Unususal Gas Token Mint Detection Bot
+# Unusual Gas Token Mint Detection Bot
 
 ## Description
 This bot is designed to monitor transactions on the blockchain for anomalous gas token minting, which is often associated with fraudulent activity. Gas tokens are a type of ERC-20 token that can be used to pay for transaction fees on the blockchain (Bsc, Polygon) When a user mints gas tokens, they pay the transaction fee and receive gas tokens in return. These gas tokens can then be used to pay for transaction fees on future transactions, potentially reducing the amount of Ether needed to perform transactions.
@@ -23,15 +23,24 @@ Describe each of the type of alerts fired by this agent
   - Severity is always set to `high` for this alert
   - Type is always set to `info`  for this alert
   - Metadata 
-    - `to` - address that initiated the transaction
-    - `contractAddress` - address of the contract
-    - `value` - gas fee of the transaction
+    - `value`: Gas fee of the transaction
+    - `deployer`: Address that initiated the transaction
+    - `contractAddress`: Address of the contract
+    - `function`: Information about the executed function, including the method ID
+    <!-- - `standardDev`: Standard deviation of a metric related to the transaction -->
+    - `threshold`: Threshold value used for comparison or evaluation
+
   - Label 
+    - `entityType` - Transaction
+    - `entity` - Transaction Hash
+    - `label` - MethodId {function methodID}
+    - `confidence` - for the transaction set to 1
+
     - `entityType` - `address` or `contract`
     - `entity` - address of the contract
-    - `label` - `sus-gas-token-scam`
+    - `label` - `sus-gas-token-consumption`
     - `confidence` for the address 
 
 ## Test Data
 
-The bot behaviour can be verified with supplied unit tests
+The bot behavior can be verified with supplied unit tests

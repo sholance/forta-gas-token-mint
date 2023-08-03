@@ -72,30 +72,36 @@ const provideHandleTransaction = (rollingMath: SdMath) => {
             "0x8c5be1e5", // Approval
           ];
 
-          const popularFunctionHashesList = mostPopularFunctionHashes.filter(
-            (hash) => hash in frequency
-          );
-          
-          // Add infrequent function hashes dynamically to the list
-          for (const hash in frequency) {
-            if (!mostPopularFunctionHashes.includes(hash)) {
-              popularFunctionHashesList.push(hash);
-            }
-          }
-          
-          // Rotate among the popular function hashes using for...of loop
-          let currentIndex = 0;
+        // Sort the mostPopularFunctionHashes array to prioritize "approval"
+        mostPopularFunctionHashes.sort((a, b) => {
+          if (a === "0x095ea7b3") return -1;
+          if (b === "0x095ea7b3") return 1;
+          return 0;
+        });
+
+        const popularFunctionHashesList = mostPopularFunctionHashes.filter(
+          (hash) => hash in frequency
+        );
+
+        // Rotate among the popular function hashes using for...of loop
+        let currentIndex = 0;
+
           
           
       const { logs } = await getTransactionReceipt(txEvent.hash);
       if (logs) {
           logs.forEach((log) => {
               const dataValue = log.data;
-              if (dataValue !== "0x" && BigInt(dataValue) < 100) {
+              if (dataValue !== "0x" && BigInt(dataValue) < 500) {
+                // console.log(BigInt(dataValue))
                   valueRange = true
               }
             });
                 }
+
+      const receipt = await getTransactionReceipt(
+        txEvent.hash,
+      );
       // Process each popular function hash
       for (const popularFunctionHash of popularFunctionHashesList) {
         currentIndex = (currentIndex + 1) % popularFunctionHashesList.length;      
@@ -104,18 +110,28 @@ const provideHandleTransaction = (rollingMath: SdMath) => {
         const average = rollingMath.getAverage();
         const standardDeviation = rollingMath.getStandardDeviation();
 
-        const numberOfEvents = logs.length;
-        // console.log(numberOfEvents)
 
-        // Create finding if gas price ia over 6 times standard deviations above the past 5000 txs
+        // Create finding if gas price ia over 8 times standard deviations above the past 5000 txs
+        const gasThreshold = average.plus(standardDeviation.times(8));
+        const staticGasThreshold = 10_000_000;
+
+        const numberOfEvents = logs.length;
+        // console.log("Number of events: ", numberOfEvents);
+        // console.log("Value range: ", valueRange);
+        // console.log("Function gas used: ", functionGasUsed);
+        // console.log("Popular function hash: ", popularFunctionHash);
+        // console.log("Average: ", average);
+        // console.log("Standard deviation: ", standardDeviation);
+        // console.log("gasThreshold: ", gasThreshold);
+
+
         // and sample size to be over 1000 with log less than 2
-        const gasThreshold = average.plus(standardDeviation.times(5));
         const minSampleSize = 100;
-        const maxNumberOfEvents = 2;
+        const maxNumberOfEvents = 3;
         if (
-            valueRange &&
-          functionGasUsed.isGreaterThan(gasThreshold) &&
-          rollingMath.getNumElements() > minSampleSize &&
+          receipt.status &&
+          valueRange &&
+          functionGasUsed.isGreaterThan(staticGasThreshold) &&          
           numberOfEvents < maxNumberOfEvents
         ) {
           findings.push(
@@ -130,8 +146,8 @@ const provideHandleTransaction = (rollingMath: SdMath) => {
                 deployer: JSON.stringify(txEvent.transaction.from),
                 contractAddress: JSON.stringify(txEvent.transaction.to),
                 function: JSON.stringify(`MethodId is ${popularFunctionHash}`),
-                standardDev: JSON.stringify(
-                standardDeviation
+                mean: JSON.stringify(
+                average
                 ),
                 threshold: JSON.stringify(gasThreshold)
               },
@@ -153,8 +169,8 @@ const provideHandleTransaction = (rollingMath: SdMath) => {
                   metadata: {
                     gasUsed: JSON.stringify(functionGasUsed),
                     contractAddress: JSON.stringify(txEvent.transaction.to),
-                    standardDev: JSON.stringify(
-                        standardDeviation                    
+                    mean: JSON.stringify(
+                        average                    
                         ),
                     gasThreshold: JSON.stringify(gasThreshold)
                   },
