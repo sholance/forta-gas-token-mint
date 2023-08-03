@@ -30,7 +30,7 @@ export const initialize = (provider: providers.Provider) => {
 
 const rollingAverageCalculator = new SdMath(5000);
 
-const provideHandleTransaction = (rollingMath: SdMath) => {
+export const provideHandleTransaction = (rollingMath: SdMath) => {
   return async (txEvent: TransactionEvent) => {
     const findings: Finding[] = [];
 
