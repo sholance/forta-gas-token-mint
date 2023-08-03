@@ -81,7 +81,7 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
           //   }
 
           // create finding if gas price is over 3 times standard deviations above the past 5000 txs
-          if (functionGasUsed.isGreaterThan(average.plus(standardDeviation.times(3)))) {
+          if (functionGasUsed.isGreaterThan(average.plus(standardDeviation.times(4)))) {
               findings.push(
                   Finding.fromObject({
                       name: "Suspected high gas token mint",
