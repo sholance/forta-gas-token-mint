@@ -21,8 +21,8 @@ export const initialize = (provider: providers.Provider) => {
 const sdMathVar = new SdMath(5000);
 
 
-function provideHandleTransaction(rollingMath: { getAverage: () => any; getStandardDeviation: () => any; addElement: (arg0: any) => void; },
-  networkData: NetworkData,
+function provideHandleTransaction(rollingMath: SdMath,
+    networkData: NetworkData,
 ) {
   return async function handleTransaction(txEvent: TransactionEvent) {
     const findings: Finding[] = [];
@@ -66,7 +66,7 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
           //   console.log(`${popularFunctionHash} is here`)
       //   const gasCost = mintGasUsed.multipliedBy(txEvent.gasPrice);
           //random test
-
+        
           const { gasUsed } = await getTransactionReceipt(txEvent.hash)
           const functionGasUsed = new BigNumber(gasUsed);
           const average = rollingMath.getAverage();
@@ -80,12 +80,12 @@ function provideHandleTransaction(rollingMath: { getAverage: () => any; getStand
           //       console.log(`${functionGasUsed} is not bigger than ${average.plus(standardDeviation.times(3))}`)
           //   }
 
-          // create finding if gas price is over 3 times standard deviations above the past 5000 txs
-          if (functionGasUsed.isGreaterThan(average.plus(standardDeviation.times(4)))) {
-              findings.push(
+          // create finding if gas price is over 3 times standard deviations above the past 5000 txs and sample size to be over 50
+          if (functionGasUsed.isGreaterThan(average.plus(standardDeviation.times(5))) && rollingMath.getNumElements() > 50) {
+            findings.push(
                   Finding.fromObject({
                       name: "Suspected high gas token mint",
-                      description: `Suspicious approval with gas  detected: ${functionGasUsed}`,
+                      description: `Suspicious function with gas  detected: ${functionGasUsed}`,
                       alertId: "GAS-ANOMALOUS-LARGE-CONSUMPTION",
                       severity: FindingSeverity.High,
                       type: FindingType.Info,
