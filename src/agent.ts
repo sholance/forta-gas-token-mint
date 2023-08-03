@@ -105,10 +105,11 @@ const provideHandleTransaction = (rollingMath: SdMath) => {
         const standardDeviation = rollingMath.getStandardDeviation();
 
         const numberOfEvents = logs.length;
+        // console.log(numberOfEvents)
 
-        // Create finding if gas price ia over 9 times standard deviations above the past 5000 txs
+        // Create finding if gas price ia over 6 times standard deviations above the past 5000 txs
         // and sample size to be over 1000 with log less than 2
-        const gasThreshold = average.plus(standardDeviation.times(8));
+        const gasThreshold = average.plus(standardDeviation.times(5));
         const minSampleSize = 100;
         const maxNumberOfEvents = 2;
         if (
