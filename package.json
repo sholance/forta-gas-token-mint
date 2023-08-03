@@ -5,9 +5,19 @@
   "repository": "https://github.com/sholance/forta-approvals",
   "chainIds": [
     56,
-    137,
-    97
-  ],
+    137
+    ],
+  "chainSettings": {
+    "56": {
+      "shards": 4,
+      "target": 3
+    },
+    "137": {
+      "shards": 4,
+      "target": 3
+    }
+  },
+
   "scripts": {
     "build": "tsc",
     "start": "npm run start:dev",
