@@ -5,7 +5,10 @@ import {
   Finding,
   FindingSeverity,
   FindingType,
+  HandleTransaction,
+  Receipt,
   TransactionEvent,
+  ethers,
   getTransactionReceipt,
 } from "forta-agent";
 import SdMath from "./deviation";
@@ -14,8 +17,9 @@ import { processFindings } from "./processFinding";
 
 const networkManager = new NetworkManager(NETWORK_MAP);
 
-let findingsCount = 0;
 let valueRange = false;
+let transactionsProcessed = 0;
+let lastBlock = 0;
 
 export const initialize = (provider: providers.Provider) => {
   return async () => {
@@ -30,30 +34,26 @@ export const initialize = (provider: providers.Provider) => {
 
 const rollingAverageCalculator = new SdMath(5000);
 
-export const provideHandleTransaction = (rollingMath: SdMath) => {
-  return async (txEvent: TransactionEvent) => {
-    const findings: Finding[] = [];
+export function provideHandleTransaction(
+  rollingMath: SdMath,
+  getTransactionReceiptFn: (txHash: string) => Promise<Receipt>
+): HandleTransaction {
+  return async (txEvent: TransactionEvent): Promise<Finding[]> => {
+    let findings: Finding[] = [];
 
-    if (findingsCount >= 5) return findings;
+    if (txEvent.blockNumber !== lastBlock) {
+      lastBlock = txEvent.blockNumber;
+      console.log(`-----Transactions processed in block ${txEvent.blockNumber - 1}: ${transactionsProcessed}-----`);
+      transactionsProcessed = 0;
+    }
+    transactionsProcessed += 1;
 
-    try {
-      const { logs } = await getTransactionReceipt(txEvent.hash);
+    const maxRetries = 2;
+    let retryCount = 0;
+    let numberOfEvents = 0;
+    let functionGasUsed = new BigNumber(0);
 
-      if (logs) {
-        for (const log of logs) {
-          const { data: dataValue } = log;
-          if (dataValue !== "0x" && BigInt(dataValue) < 500) {
-            valueRange = true;
-          }
-        }
-      }
-      const numberOfEvents = logs.length;
-
-      const receipt = await getTransactionReceipt(txEvent.hash);
-      const { gasUsed } = receipt;
-      const functionGasUsed = new BigNumber(gasUsed);
-      const average = rollingMath.getAverage();
-      const standardDeviation = rollingMath.getStandardDeviation();
+    let receipt: Receipt | undefined;
 
     // Calculate the frequency of each function hash
     const frequency: { [key: string]: bigint } = {};
@@ -83,83 +83,98 @@ export const provideHandleTransaction = (rollingMath: SdMath) => {
       }
     );
 
-    // Process each popular function hash
-    for (const popularFunctionHash of popularFunctionHashList) {
-
-        const gasThreshold = average.plus(standardDeviation.times(8));
-        const staticGasThreshold = 5_000_000;
-        const maxNumberOfEvents = 3;
-
-        if (
-          receipt.status &&
-          valueRange &&
-          functionGasUsed.isGreaterThan(staticGasThreshold) &&
-          numberOfEvents < maxNumberOfEvents
-        ) {
-          findings.push(
-            Finding.fromObject({
-              name: "Suspected high gas token mint",
-              description: `Suspicious function with anomalous gas detected: ${functionGasUsed}`,
-              alertId: "GAS-ANOMALOUS-LARGE-CONSUMPTION",
-              severity: FindingSeverity.High,
-              type: FindingType.Info,
-              metadata: {
-                value: JSON.stringify(functionGasUsed),
-                deployer: JSON.stringify(txEvent.transaction.from),
-                contractAddress: JSON.stringify(txEvent.transaction.to),
-                function: JSON.stringify(`MethodId is ${functionHash}`),
-                mean: JSON.stringify(
-                average
-                ),
-                threshold: JSON.stringify(staticGasThreshold)
-              },
-              labels: [
-                {
-                  entity: txEvent.hash,
-                  entityType: EntityType.Transaction,
-                  label: `MethodID ${functionHash}`,
-                  confidence: 1,
-                  remove: false,
-                  metadata: {},
-                },
-                {
-                  entityType: EntityType.Address,
-                  entity: JSON.stringify(txEvent.transaction.to),
-                  label: "sus-gas-consumption",
-                  confidence: 0.8,
-                  remove: false,
-                  metadata: {
-                    gasUsed: JSON.stringify(functionGasUsed),
-                    contractAddress: JSON.stringify(txEvent.transaction.to),
-                    mean: JSON.stringify(
-                        average                    
-                        ),
-                    gasThreshold: JSON.stringify(staticGasThreshold)
-                  },
-                },
-              ],
-            })
-          );    
-          findingsCount++;
+    while (retryCount <= maxRetries) {
+      try {
+        receipt = await getTransactionReceiptFn(txEvent.hash);
+        const { gasUsed, logs } = receipt;
+        functionGasUsed = new BigNumber(gasUsed);
+        numberOfEvents = logs.length;
+        if (logs) {
+          for (const log of logs) {
+            const { data: dataValue } = log;
+            if (dataValue !== "0x" && BigInt(dataValue) < 700) {
+              valueRange = true;
+            }
+          }
         }
+        break;
+      } catch (error) {
+        console.log(`Attempt ${retryCount + 1} to fetch transaction receipt failed`);
+        if (retryCount === maxRetries) {
+          throw new Error(`Failed to retrieve transaction receipt after ${maxRetries + 1} attempts`);
+        }
+        retryCount++;
+        // wait for 1 second before retrying
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
-
-      rollingMath.addElement(functionGasUsed);
-    } catch (error) {
-      console.error("Error in handleTransaction:", error);
     }
 
-    if (findings.length > 0) {
-      await processFindings(findings);
+    const maxNumberOfEvents = 3;
+    const staticGasThreshold = 5000000;
+
+    for (const popularFunctionHash of popularFunctionHashList) {
+      if (
+        receipt?.status &&
+        functionGasUsed.isGreaterThan(staticGasThreshold) &&
+        valueRange &&
+        numberOfEvents < maxNumberOfEvents
+      ) {
+        let hash = popularFunctionHash;
+        const average = rollingMath.getAverage();
+        const addressTo = JSON.stringify(txEvent.transaction.to);
+
+        findings.push(
+          Finding.fromObject({
+            name: "Suspected high gas token mint",
+            description: `Suspicious function with anomalous gas detected: ${functionGasUsed}`,
+            alertId: "GAS-ANOMALOUS-LARGE-CONSUMPTION",
+            severity: FindingSeverity.High,
+            type: FindingType.Info,
+            metadata: {
+              value: functionGasUsed.toString(),
+              deployer: addressTo,
+              contractAddress: addressTo,
+              function: `MethodId is ${hash}`,
+              mean: average.toString(),
+              threshold: staticGasThreshold.toString(),
+            },
+            labels: [
+              {
+                entity: txEvent.hash,
+                entityType: EntityType.Transaction,
+                label: `MethodID ${hash}`,
+                confidence: 1,
+                remove: false,
+                metadata: {},
+              },
+              {
+                entityType: EntityType.Address,
+                entity: addressTo,
+                label: "sus-gas-consumption",
+                confidence: 0.8,
+                remove: false,
+                metadata: {
+                  gasUsed: functionGasUsed.toString(),
+                  contractAddress: addressTo,
+                  mean: average.toString(),
+                  gasThreshold: staticGasThreshold.toString(),
+                },
+              },
+            ],
+          })
+        );
+        rollingMath.addElement(functionGasUsed);
+        processFindings(findings);
+      }
     }
 
+    let allAlerts = 0;
+    allAlerts += 1;
     return findings;
   };
-};
+}
 
 export default {
   provideHandleTransaction,
-  handleTransaction: provideHandleTransaction(rollingAverageCalculator),
-  };
-  
-  
+  handleTransaction: provideHandleTransaction(rollingAverageCalculator, getTransactionReceipt),
+};
