@@ -7,8 +7,9 @@ import {
   FindingType,
   HandleTransaction,
   Receipt,
-  TransactionEvent,
   ethers,
+  TransactionEvent,
+  getEthersProvider,
   getTransactionReceipt,
 } from "forta-agent";
 import SdMath from "./deviation";
@@ -35,7 +36,8 @@ export const initialize = (provider: providers.Provider) => {
 const rollingAverageCalculator = new SdMath(5000);
 
 export function provideHandleTransaction(
-  rollingMath: SdMath,
+  provider: providers.Provider,
+    rollingMath: SdMath,
   getTransactionReceiptFn: (txHash: string) => Promise<Receipt>
 ): HandleTransaction {
   return async (txEvent: TransactionEvent): Promise<Finding[]> => {
@@ -52,6 +54,10 @@ export function provideHandleTransaction(
     let retryCount = 0;
     let numberOfEvents = 0;
     let functionGasUsed = new BigNumber(0);
+    let chainId;
+    let staticGasThreshold = 5000000;
+    let maxNumberOfEvents = 3;
+
 
     let receipt: Receipt | undefined;
 
@@ -87,6 +93,7 @@ export function provideHandleTransaction(
       try {
         receipt = await getTransactionReceiptFn(txEvent.hash);
         const { gasUsed, logs } = receipt;
+        const { chainId } = await provider.getNetwork();
         functionGasUsed = new BigNumber(gasUsed);
         numberOfEvents = logs.length;
         if (logs) {
@@ -96,6 +103,10 @@ export function provideHandleTransaction(
               valueRange = true;
             }
           }
+        }
+        if (chainId == 137 ) {
+          // staticGasThreshold = 500000
+          maxNumberOfEvents = 4
         }
         break;
       } catch (error) {
@@ -109,8 +120,6 @@ export function provideHandleTransaction(
       }
     }
 
-    const maxNumberOfEvents = 3;
-    const staticGasThreshold = 5000000;
 
     for (const popularFunctionHash of popularFunctionHashList) {
       if (
@@ -176,5 +185,5 @@ export function provideHandleTransaction(
 
 export default {
   provideHandleTransaction,
-  handleTransaction: provideHandleTransaction(rollingAverageCalculator, getTransactionReceipt),
+  handleTransaction: provideHandleTransaction(getEthersProvider(), rollingAverageCalculator, getTransactionReceipt),
 };
