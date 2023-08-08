@@ -58,7 +58,6 @@ export function provideHandleTransaction(
     let staticGasThreshold = 5000000;
     let maxNumberOfEvents = 3;
 
-
     let receipt: Receipt | undefined;
 
     // Calculate the frequency of each function hash
@@ -131,6 +130,7 @@ export function provideHandleTransaction(
         let hash = popularFunctionHash;
         const average = rollingMath.getAverage();
         const addressTo = JSON.stringify(txEvent.transaction.to);
+        let mean = average.isNaN() ? functionGasUsed.toString() : average.toString();
 
         findings.push(
           Finding.fromObject({
@@ -144,7 +144,7 @@ export function provideHandleTransaction(
               deployer: addressTo,
               contractAddress: addressTo,
               function: `MethodId is ${hash}`,
-              mean: average.toString(),
+              mean: mean,
               threshold: staticGasThreshold.toString(),
             },
             labels: [
@@ -165,7 +165,7 @@ export function provideHandleTransaction(
                 metadata: {
                   gasUsed: functionGasUsed.toString(),
                   contractAddress: addressTo,
-                  mean: average.toString(),
+                  mean: mean,
                   gasThreshold: staticGasThreshold.toString(),
                 },
               },
