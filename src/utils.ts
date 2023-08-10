@@ -19,11 +19,11 @@ export default class Fetcher {
       case 56:
         return this.apiKeys.bscscanApiKeys.length > 0
           ? this.apiKeys.bscscanApiKeys[Math.floor(Math.random() * this.apiKeys.bscscanApiKeys.length)]
-          : "bscApiKeyHere";
+          : process.env.BSC_API_KEY;
       case 137:
         return this.apiKeys.polygonscanApiKeys.length > 0
           ? this.apiKeys.polygonscanApiKeys[Math.floor(Math.random() * this.apiKeys.polygonscanApiKeys.length)]
-          : "polygonApiKeyHere";
+          : process.env.POLYGON_API_KEY;
     }
   };
   public getContractCreator = async (address: string, chainId: number) => {
