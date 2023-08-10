@@ -15,6 +15,9 @@ import {
 import SdMath from "./deviation";
 import NetworkManager, { NETWORK_MAP } from "./network";
 import { processFindings } from "./processFinding";
+import Fetcher from "./utils";
+import { keys } from "./config";
+
 
 const networkManager = new NetworkManager(NETWORK_MAP);
 
@@ -36,6 +39,7 @@ export const initialize = (provider: providers.Provider) => {
 const rollingAverageCalculator = new SdMath(5000);
 
 export function provideHandleTransaction(
+  fetcher: Fetcher,
   provider: providers.Provider,
     rollingMath: SdMath,
   getTransactionReceiptFn: (txHash: string) => Promise<Receipt>
@@ -107,6 +111,7 @@ export function provideHandleTransaction(
           // staticGasThreshold = 500000
           maxNumberOfEvents = 4
         }
+        // console.log(contractCreator)
         break;
       } catch (error) {
         console.log(`Attempt ${retryCount + 1} to fetch transaction receipt failed`);
@@ -129,7 +134,9 @@ export function provideHandleTransaction(
       ) {
         let hash = popularFunctionHash;
         const average = rollingMath.getAverage();
-        const addressTo = JSON.stringify(txEvent.transaction.to);
+        const contractAddress = txEvent.to?.toLowerCase();
+        const chainIdNo = Number(txEvent.network);
+        const deployer = await fetcher.getContractCreator(contractAddress!, chainIdNo);
         let mean = average.isNaN() ? functionGasUsed.toString() : average.toString();
 
         findings.push(
@@ -141,8 +148,8 @@ export function provideHandleTransaction(
             type: FindingType.Info,
             metadata: {
               value: functionGasUsed.toString(),
-              deployer: addressTo,
-              contractAddress: addressTo,
+              deployer: deployer,
+              contractAddress: contractAddress!,
               function: `MethodId is ${hash}`,
               mean: mean,
               threshold: staticGasThreshold.toString(),
@@ -158,13 +165,13 @@ export function provideHandleTransaction(
               },
               {
                 entityType: EntityType.Address,
-                entity: addressTo,
+                entity: contractAddress!,
                 label: "sus-gas-consumption",
                 confidence: 0.8,
                 remove: false,
                 metadata: {
                   gasUsed: functionGasUsed.toString(),
-                  contractAddress: addressTo,
+                  contractAddress: contractAddress!,
                   mean: mean,
                   gasThreshold: staticGasThreshold.toString(),
                 },
@@ -185,5 +192,5 @@ export function provideHandleTransaction(
 
 export default {
   provideHandleTransaction,
-  handleTransaction: provideHandleTransaction(getEthersProvider(), rollingAverageCalculator, getTransactionReceipt),
+  handleTransaction: provideHandleTransaction(new Fetcher(getEthersProvider(), keys), getEthersProvider(), rollingAverageCalculator, getTransactionReceipt),
 };

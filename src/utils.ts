@@ -1,154 +1,65 @@
-import fs from "fs";
-import path from "path";
-import { Log, ethers } from "forta-agent";
+import { providers, Contract, BigNumber, ethers } from "ethers";
+import { etherscanApis } from "./config";
 
-interface RepositoryTreeNode {
-    path: string;
-    mode: string;
-    type: string;
-    sha: string;
-    size?: number;
-    url: string;
+interface apiKeys {
+  bscscanApiKeys: string[];
+  polygonscanApiKeys: string[];
 }
 
-interface RepositoryTree {
-    sha: string;
-    url: string;
-    tree: RepositoryTreeNode[];
-    truncated: boolean;
-}
 
-interface RepositoryConfig {
-    owner: string;
-    name: string;
-    branch: string;
-    path: string;
-}
-type InputsMetadata = {
-    indexed: Array<ethers.utils.ParamType>;
-    nonIndexed: Array<ethers.utils.ParamType>;
-    dynamic: Array<boolean>;
-};
-
-
-export function getAllAbis(): ethers.utils.Interface[] {
-    const abis: ethers.utils.Interface[] = [];
-    const paths = [`${__dirname}${path.sep}abis`];
-    let currPath: string | undefined;
-    while (true) {
-        currPath = paths.pop();
-        if (!currPath) break;
-
-        const items = fs.readdirSync(currPath);
-        const files = items.filter((item) => item.endsWith(".json"));
-        for (const file of files) {
-            abis.push(getAbi(`${currPath}${path.sep}${file}`));
-        }
-        const folders = items.filter((item) => !item.endsWith(".json"));
-        for (const folder of folders) {
-            paths.push(`${currPath}${path.sep}${folder}`);
-        }
+export default class Fetcher {
+  provider: providers.JsonRpcProvider | undefined;
+  private apiKeys: apiKeys;
+  constructor(provider: ethers.providers.JsonRpcProvider, apiKeys: apiKeys) {
+    this.apiKeys = apiKeys;
+    this.provider = provider;
+  }
+    private getBlockExplorerKey = (chainId: number) => {
+    switch (chainId) {
+      case 56:
+        return this.apiKeys.bscscanApiKeys.length > 0
+          ? this.apiKeys.bscscanApiKeys[Math.floor(Math.random() * this.apiKeys.bscscanApiKeys.length)]
+          : "bscApiKeyHere";
+      case 137:
+        return this.apiKeys.polygonscanApiKeys.length > 0
+          ? this.apiKeys.polygonscanApiKeys[Math.floor(Math.random() * this.apiKeys.polygonscanApiKeys.length)]
+          : "polygonApiKeyHere";
     }
-    return abis;
-}
+  };
+  public getContractCreator = async (address: string, chainId: number) => {
+    const { urlContractCreation } = etherscanApis[chainId];
+    const key = this.getBlockExplorerKey(chainId);
+    const url = `${urlContractCreation}&contractaddresses=${address}&apikey=${key}`;
+    const maxRetries = 3;
 
-export function getAbi(filePath: string): ethers.utils.Interface {
-    const { abi } = JSON.parse(fs.readFileSync(filePath).toString());
-    return new ethers.utils.Interface(abi);
-}
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await (await fetch(url)).json();
 
-export let EVENT_TOPIC_TO_FRAGMENT: { [topic: string]: ethers.utils.EventFragment[] } =
-    {};
-export let FRAGMENT_TO_INPUTS_METADATA = new Map<
-    ethers.utils.Fragment,
-    InputsMetadata
->();
-let abiCoder = new ethers.utils.AbiCoder();
-
-export function processInputsMetadata(eventFragment: ethers.utils.EventFragment) {
-}
-export function filterLog(logs: Log[]) {
-    const results: any[] = [];
-    for (const log of logs) {
-        const fragments = EVENT_TOPIC_TO_FRAGMENT[log.topics[0]];
-        if (!fragments) continue;
-
-        try {
-            // if more than one fragment, figure out if event is erc20 vs erc721 (erc721 will have 4 topics for Transfer/Approval)
-            let fragment = fragments[0];
-            if (fragments.length > 1 && log.topics.length === 4) {
-                fragment = fragments[1];
-            }
-
-            results.push({
-                name: fragment.name,
-                address: log.address,
-                args: decodeEventLog(fragment, log.data, log.topics),
-            });
-        } catch (e) {
-            console.log("error decoding log", e);
-        }
-    }
-    return results;
-}
-export function decodeEventLog(
-    eventFragment: ethers.utils.EventFragment,
-    data: ethers.utils.BytesLike,
-    topics: ReadonlyArray<string>
-): ethers.utils.Result {
-
-    topics = topics.slice(1);
-
-    let { indexed, nonIndexed, dynamic } =
-        FRAGMENT_TO_INPUTS_METADATA.get(eventFragment)!;
-
-    let resultIndexed =
-        topics != null
-            ? abiCoder.decode(indexed, ethers.utils.concat(topics))
-            : null;
-    let resultNonIndexed = abiCoder.decode(nonIndexed, data, true);
-
-    let result: Array<any> & { [key: string]: any } = [];
-    let namedResult: Array<any> & { [key: string]: any } = [];
-    let nonIndexedIndex = 0,
-        indexedIndex = 0;
-    eventFragment.inputs.forEach((param, index) => {
-        if (param.indexed) {
-            if (resultIndexed == null) {
-                result[index] = new ethers.utils.Indexed({
-                    _isIndexed: true,
-                    hash: "",
-                });
-            } else if (dynamic[index]) {
-                result[index] = new ethers.utils.Indexed({
-                    _isIndexed: true,
-                    hash: resultIndexed[indexedIndex++],
-                });
-            } else {
-                try {
-                    result[index] = resultIndexed[indexedIndex++];
-                } catch (error) {
-                    result[index] = error;
-                }
-            }
+        if (
+          result.message.startsWith("NOTOK") ||
+          result.message.startsWith("No data") ||
+          result.message.startsWith("Query Timeout")
+        ) {
+          console.log(`Block explorer error occurred (attempt ${attempt}); retrying check for ${address}`);
+          if (attempt === maxRetries) {
+            console.log(`Block explorer error occurred (final attempt); skipping check for ${address}`);
+            return null;
+          }
         } else {
-            try {
-                result[index] = resultNonIndexed[nonIndexedIndex++];
-            } catch (error) {
-                result[index] = error;
-            }
+          return result.result[0].contractCreator;
         }
-
-        // Add the keyword argument if named and safe
-        if (param.name && result[param.name] == null) {
-            const value = result[index];
-
-            // Make error named values throw on access
-            if (!(value instanceof Error)) {
-                namedResult[param.name] = value;
-            }
+      } catch (error) {
+        console.error(`An error occurred during the fetch (attempt ${attempt}):`, error);
+        if (attempt === maxRetries) {
+          console.error(`Error during fetch (final attempt); skipping check for ${address}`);
+          return null;
         }
-    });
+      }
+    }
 
-    return namedResult; //Object.freeze(result);
+    console.error(`Failed to fetch contract creator for ${address} after ${maxRetries} retries`);
+    return null;
+  };
+
 }
