@@ -1,5 +1,7 @@
 import { providers, Contract, BigNumber, ethers } from "ethers";
 import { etherscanApis } from "./config";
+import fetch from "node-fetch";
+
 
 interface apiKeys {
   bscscanApiKeys: string[];
